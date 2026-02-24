@@ -1,0 +1,100 @@
+# ------------------------------------------------------------
+# Node + React (npm) - CMPE 131
+# ------------------------------------------------------------
+
+# dependencies
+node_modules/
+**/node_modules/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# build output
+dist/
+build/
+out/
+.next/
+coverage/
+
+# caches
+.cache/
+.parcel-cache/
+.vite/
+.vitest/
+.turbo/
+.nx/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# test artifacts
+playwright-report/
+test-results/
+cypress/videos/
+cypress/screenshots/
+junit.xml
+
+# ------------------------------------------------------------
+# Local data / temp (only local, not source)
+# ------------------------------------------------------------
+tmp/
+temp/
+uploads/
+*.sqlite
+*.sqlite3
+
+# ------------------------------------------------------------
+# OS / editor
+# ------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.iml
+
+# ------------------------------------------------------------
+# Hosting / platforms (common)
+# ------------------------------------------------------------
+.vercel/
+.netlify/
+
+# ------------------------------------------------------------
+# Claude Code (ignore local Claude tooling files)
+# ------------------------------------------------------------
+.claude/
+.claude-code/
+.claudecode/
+**/.claude/
+**/.claude-code/
+**/.claudecode/
+claude*.log
+**/claude*.log
+
+# ------------------------------------------------------------
+# Yarn PnP (not used with npm, but harmless if someone has it)
+# ------------------------------------------------------------
+.pnp.cjs
+.pnp.js
+.pnp.loader.mjs
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
