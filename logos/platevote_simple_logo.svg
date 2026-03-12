@@ -1,0 +1,20 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" fill="#FFFFFF"/>
+
+  <g transform="translate(0,10)">
+    <circle cx="470" cy="250" r="34" fill="#F4A261"/>
+    <circle cx="600" cy="220" r="40" fill="#2A9D8F"/>
+    <circle cx="730" cy="250" r="34" fill="#E9C46A"/>
+
+    <path d="M425 345C425 308 455 278 492 278H510C547 278 577 308 577 345V378H425V345Z" fill="#F4A261"/>
+    <path d="M530 330C530 285 566 248 611 248H589C634 248 670 285 670 330V386H530V330Z" fill="#2A9D8F"/>
+    <path d="M623 345C623 308 653 278 690 278H708C745 278 775 308 775 345V378H623V345Z" fill="#E9C46A"/>
+
+    <path d="M520 360L580 420L700 305" stroke="#264653" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <text x="600" y="620" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="108" font-weight="700" fill="#1F2937">PlateVote</text>
+    <text x="600" y="690" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="400" fill="#6B7280" letter-spacing="3">CHOOSE TOGETHER</text>
+  </g>
+</svg>
