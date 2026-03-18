@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1200 900">
+  <!-- Generator: Adobe Illustrator 30.2.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #2a9d8f;
+      }
+
+      .st1 {
+        fill: #1f2937;
+        font-family: Arial-BoldMT, Arial;
+        font-size: 190.68px;
+        font-weight: 700;
+      }
+
+      .st1, .st2 {
+        isolation: isolate;
+      }
+
+      .st3 {
+        fill: #f4a261;
+      }
+
+      .st4 {
+        fill: none;
+        stroke: #264653;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 60.03px;
+      }
+
+      .st2 {
+        fill: #6b7280;
+        font-family: ArialMT, Arial;
+        font-size: 52.97px;
+        letter-spacing: .1em;
+      }
+
+      .st5 {
+        fill: #e9c46a;
+      }
+    </style>
+  </defs>
+  <g>
+    <circle class="st3" cx="381.46" cy="125.59" r="60.03"/>
+    <circle class="st0" cx="610.98" cy="72.62" r="70.62"/>
+    <circle class="st5" cx="840.51" cy="125.59" r="60.03"/>
+    <path class="st3" d="M302,293.32c0-65.33,52.97-118.3,118.3-118.3h31.78c65.33,0,118.3,52.97,118.3,118.3v58.26h-268.37v-58.26Z"/>
+    <path class="st0" d="M487.39,266.84c0-79.45,63.56-144.78,143.01-144.78h-38.84c79.45,0,143.01,65.33,143.01,144.78v98.87h-247.18v-98.87Z"/>
+    <path class="st5" d="M651.59,293.32c0-65.33,52.97-118.3,118.3-118.3h31.78c65.33,0,118.3,52.97,118.3,118.3v58.26h-268.37v-58.26Z"/>
+    <path class="st4" d="M469.74,319.81l105.94,105.94,211.87-203.04"/>
+  </g>
+  <g>
+    <text class="st1" transform="translate(183.57 759.21)"><tspan x="0" y="0">PlateVote</tspan></text>
+    <text class="st2" transform="translate(302.94 882.8)"><tspan x="0" y="0">CHOOSE TOGETHER</tspan></text>
+  </g>
+</svg>

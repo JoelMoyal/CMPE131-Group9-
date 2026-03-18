@@ -51,6 +51,7 @@ junit.xml
 tmp/
 temp/
 uploads/
+.history/
 *.sqlite
 *.sqlite3
 

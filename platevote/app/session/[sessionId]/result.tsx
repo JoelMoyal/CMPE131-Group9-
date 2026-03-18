@@ -1,74 +1,164 @@
-import { useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 
+import { listOptions } from '../../../src/features/options/api';
+import { listVotes } from '../../../src/features/voting/api';
 import { computeWinner } from '../../../src/features/results/selectors';
+import { ConfettiOverlay } from '../../../src/features/results/components/ConfettiOverlay';
 import { THEME } from '../../../src/lib/constants/theme';
-
-const DEMO_OPTIONS = [
-  { id: 'o1', name: 'Sushi Place', createdAt: '2026-03-11T00:00:00.000Z', distanceMiles: 1.2 },
-  { id: 'o2', name: 'Taco Spot', createdAt: '2026-03-11T00:01:00.000Z', distanceMiles: 0.6 },
-];
-
-const DEMO_VOTES = [
-  { optionId: 'o1', score: 4 },
-  { optionId: 'o1', score: 5 },
-  { optionId: 'o2', score: 5 },
-  { optionId: 'o2', score: 3 },
-];
+import { useSessionStore } from '../../../src/state/session-store';
+import type { WinnerResult } from '../../../src/features/results/selectors';
 
 export default function ResultScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const winner = computeWinner(DEMO_OPTIONS, DEMO_VOTES);
+  const clearSession = useSessionStore((s) => s.clearSession);
+
+  const [winner, setWinner] = useState<WinnerResult | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const load = async () => {
+      try {
+        const [options, votes] = await Promise.all([
+          listOptions(sessionId),
+          listVotes(sessionId),
+        ]);
+        const result = computeWinner(options, votes);
+        setWinner(result);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [sessionId]);
+
+  const handleNewSession = () => {
+    clearSession();
+    router.replace('/');
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={THEME.colors.primary} size="large" />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.page}>
-      <Text style={styles.heading}>Final Pick</Text>
-      <Text style={styles.subheading}>Session {sessionId}</Text>
+    <SafeAreaView style={styles.safe}>
+      <ConfettiOverlay active={true} />
 
-      <View style={styles.card}>
-        <Text style={styles.winnerLabel}>Winner</Text>
-        <Text style={styles.winnerName}>{winner?.name ?? 'No winner yet'}</Text>
-        <Text style={styles.summary}>Demo calculation with tie-break scaffold.</Text>
+      <View style={styles.container}>
+        <View style={styles.topSection}>
+          <Text style={styles.announcement}>And the winner is...</Text>
+          <Text style={styles.winnerName}>{winner?.name ?? 'No winner'}</Text>
+        </View>
+
+        {/* Winner photo placeholder or color block */}
+        <View style={styles.photoContainer}>
+          <View style={[styles.photoPlaceholder]}>
+            <Text style={styles.photoEmoji}>🍽️</Text>
+          </View>
+        </View>
+
+        {winner && (
+          <Text style={styles.stats}>
+            {winner.avgScore.toFixed(1)} avg · {winner.voteCount} vote{winner.voteCount !== 1 ? 's' : ''}
+            {winner.distanceMiles ? `  ·  ${winner.distanceMiles} mi` : ''}
+          </Text>
+        )}
+
+        <View style={styles.actions}>
+          <Pressable style={styles.primaryButton} onPress={handleNewSession}>
+            <Text style={styles.primaryButtonText}>New Session</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryButton} onPress={() => {}}>
+            <Text style={styles.secondaryButtonText}>Just Spoiler</Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
+  safe: { flex: 1, backgroundColor: THEME.colors.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: THEME.colors.background },
+  container: {
     flex: 1,
-    padding: 24,
-    gap: 16,
-    backgroundColor: THEME.colors.background,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 32,
+    paddingVertical: 32,
   },
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: THEME.colors.foreground,
-  },
-  subheading: {
+  topSection: { alignItems: 'center', gap: 8 },
+  announcement: {
+    fontSize: 18,
     color: THEME.colors.mutedForeground,
-    fontSize: 15,
-  },
-  card: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    backgroundColor: THEME.colors.card,
-    padding: 16,
-    gap: 6,
-  },
-  winnerLabel: {
-    color: THEME.colors.mutedForeground,
-    fontSize: 13,
+    fontWeight: '500',
   },
   winnerName: {
+    fontSize: 40,
+    fontWeight: '900',
     color: THEME.colors.foreground,
-    fontWeight: '700',
-    fontSize: 26,
+    textAlign: 'center',
+    lineHeight: 46,
   },
-  summary: {
+  photoContainer: {
+    width: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  photoPlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: THEME.colors.primary + '30',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: THEME.colors.primary + '40',
+  },
+  photoEmoji: { fontSize: 72 },
+  stats: {
+    fontSize: 15,
     color: THEME.colors.mutedForeground,
-    fontSize: 14,
+    fontWeight: '500',
+  },
+  actions: { width: '100%', gap: 12 },
+  primaryButton: {
+    borderRadius: THEME.radius.input,
+    backgroundColor: THEME.colors.primary,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: THEME.colors.primaryForeground,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  secondaryButton: {
+    borderRadius: THEME.radius.input,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: THEME.colors.card,
+  },
+  secondaryButtonText: {
+    color: THEME.colors.foreground,
+    fontWeight: '600',
+    fontSize: 15,
   },
 });
