@@ -10,6 +10,7 @@ type SubscriptionData = {
   options: RestaurantOption[];
   votes: Vote[];
   loading: boolean;
+  refetchOptions: () => Promise<void>;
 };
 
 export function useSessionSubscription(sessionId: string | null): SubscriptionData {
@@ -18,6 +19,12 @@ export function useSessionSubscription(sessionId: string | null): SubscriptionDa
   const [options, setOptions] = useState<RestaurantOption[]>([]);
   const [votes, setVotes] = useState<Vote[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const refetchOptions = async () => {
+    if (!sessionId) return;
+    const data = await listOptions(sessionId);
+    setOptions(data);
+  };
 
   useEffect(() => {
     if (!sessionId || !supabase) {
@@ -172,5 +179,5 @@ export function useSessionSubscription(sessionId: string | null): SubscriptionDa
     };
   }, [sessionId]);
 
-  return { session, participants, options, votes, loading };
+  return { session, participants, options, votes, loading, refetchOptions };
 }

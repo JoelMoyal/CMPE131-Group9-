@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,13 +30,21 @@ export default function SessionLobbyScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const { participantId, isHost, setStatus } = useSessionStore();
 
-  const { session, participants, options, loading } = useSessionSubscription(sessionId ?? null);
+  const { session, participants, options, loading, refetchOptions } = useSessionSubscription(sessionId ?? null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [optionName, setOptionName] = useState('');
   const [optionCuisine, setOptionCuisine] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
+
+  // Poll every 4 seconds to sync restaurants and session status without realtime
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchOptions();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
 
   // Navigate when session status changes via realtime
   const sessionStatus = session?.status;
@@ -55,6 +63,7 @@ export default function SessionLobbyScreen() {
       setOptionName('');
       setOptionCuisine('');
       setShowAddModal(false);
+      await refetchOptions();
     } catch (err: unknown) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Could not add restaurant');
     } finally {
