@@ -38,15 +38,7 @@ export default function SessionLobbyScreen() {
   const [addLoading, setAddLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
 
-  // Poll every 4 seconds to sync restaurants and session status without realtime
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetchOptions();
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [sessionId]);
-
-  // Navigate when session status changes via realtime
+  // Navigate when session status changes (picked up by polling in hook)
   const sessionStatus = session?.status;
   if (sessionStatus === 'voting') {
     router.replace({ pathname: '/session/[sessionId]/vote', params: { sessionId } });
