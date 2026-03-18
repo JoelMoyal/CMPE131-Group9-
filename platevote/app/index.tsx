@@ -64,7 +64,7 @@ export default function WelcomeScreen() {
           {/* Logo + tagline */}
           <View style={styles.hero}>
             <Image
-              source={require('../logos/Logo.png')}
+              source={require('../assets/Logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
