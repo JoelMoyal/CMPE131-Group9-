@@ -12,58 +12,121 @@ function makeLocalSession(): SessionSummary {
 }
 
 export async function createSession(
-  _displayName: string,
-  _title?: string,
-): Promise<SessionSummary> {
+  displayName: string,
+  title?: string,
+): Promise<{ session: SessionSummary; participantId: string }> {
   if (!supabase) {
-    return makeLocalSession();
+    return { session: makeLocalSession(), participantId: 'local-participant' };
   }
 
-  // TODO: Replace with RPC call to create session + host participant in one transaction.
   const client = requireSupabase();
-  const { data, error } = await client
-    .from('sessions')
-    .insert({ host_user_id: (await client.auth.getUser()).data.user?.id })
-    .select('id, join_code, title, status, host_user_id')
-    .single();
+  const { data, error } = await client.rpc('create_session_with_host', {
+    p_display_name: displayName,
+    p_title: title ?? null,
+  });
 
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     throw new Error(error?.message ?? 'Unable to create session');
   }
 
+  const row = data[0] as { session_id: string; participant_id: string; join_code: string };
+
+  const { data: sessionData, error: sessionError } = await client
+    .from('sessions')
+    .select('id, join_code, title, status, host_user_id')
+    .eq('id', row.session_id)
+    .single();
+
+  if (sessionError || !sessionData) {
+    throw new Error(sessionError?.message ?? 'Unable to load session');
+  }
+
   return {
-    id: data.id,
-    joinCode: data.join_code,
-    title: data.title,
-    status: data.status,
-    hostUserId: data.host_user_id,
+    session: {
+      id: sessionData.id,
+      joinCode: sessionData.join_code,
+      title: sessionData.title,
+      status: sessionData.status,
+      hostUserId: sessionData.host_user_id,
+    },
+    participantId: row.participant_id,
   };
 }
 
 export async function joinSession(
-  _joinCode: string,
-  _displayName: string,
-): Promise<SessionSummary> {
+  joinCode: string,
+  displayName: string,
+): Promise<{ session: SessionSummary; participantId: string }> {
   if (!supabase) {
-    return makeLocalSession();
+    return { session: makeLocalSession(), participantId: 'local-participant' };
   }
 
-  // TODO: Replace with RPC call that validates join code and inserts participant.
-  throw new Error('joinSession is not implemented yet.');
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('join_session_by_code', {
+    p_join_code: joinCode.toUpperCase(),
+    p_display_name: displayName,
+  });
+
+  if (error || !data || data.length === 0) {
+    throw new Error(error?.message ?? 'Unable to join session');
+  }
+
+  const row = data[0] as { session_id: string; participant_id: string };
+
+  const { data: sessionData, error: sessionError } = await client
+    .from('sessions')
+    .select('id, join_code, title, status, host_user_id')
+    .eq('id', row.session_id)
+    .single();
+
+  if (sessionError || !sessionData) {
+    throw new Error(sessionError?.message ?? 'Unable to load session');
+  }
+
+  return {
+    session: {
+      id: sessionData.id,
+      joinCode: sessionData.join_code,
+      title: sessionData.title,
+      status: sessionData.status,
+      hostUserId: sessionData.host_user_id,
+    },
+    participantId: row.participant_id,
+  };
 }
 
-export async function startVoting(_sessionId: string): Promise<void> {
-  if (!supabase) {
-    return;
-  }
+export async function startVoting(sessionId: string): Promise<void> {
+  if (!supabase) return;
 
-  throw new Error('startVoting is not implemented yet.');
+  const client = requireSupabase();
+  const { error } = await client
+    .from('sessions')
+    .update({ status: 'voting' })
+    .eq('id', sessionId);
+
+  if (error) throw new Error(error.message);
 }
 
-export async function completeSession(_sessionId: string): Promise<void> {
-  if (!supabase) {
-    return;
-  }
+export async function completeSession(sessionId: string): Promise<void> {
+  if (!supabase) return;
 
-  throw new Error('completeSession is not implemented yet.');
+  const client = requireSupabase();
+
+  // Get the winning option from option_scores view
+  const { data: scores } = await client
+    .from('option_scores')
+    .select('option_id')
+    .eq('session_id', sessionId)
+    .order('avg_score', { ascending: false })
+    .order('vote_count', { ascending: false })
+    .limit(1);
+
+  const winnerId = scores?.[0]?.option_id ?? null;
+
+  const { error } = await client
+    .from('sessions')
+    .update({ status: 'completed', selected_option_id: winnerId })
+    .eq('id', sessionId);
+
+  if (error) throw new Error(error.message);
 }

@@ -23,7 +23,14 @@ export type RestaurantOption = {
   cuisine: string | null;
   priceLevel: number | null;
   distanceMiles: number | null;
+  imageUrl: string | null;
   createdAt: string;
+};
+
+export type SessionFilters = {
+  cuisines: string[];
+  priceLevel: number | null;
+  maxDistanceMiles: number | null;
 };
 
 export type Vote = {
