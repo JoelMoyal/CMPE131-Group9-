@@ -17,8 +17,9 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase/client';
 
-import { addOption } from '../../../src/features/options/api';
+import { addOption, type AddOptionInput } from '../../../src/features/options/api';
 import { OptionRow } from '../../../src/features/options/components/OptionRow';
+import { getRecommendations, type Recommendation } from '../../../src/features/recommendations/api';
 import { startVoting } from '../../../src/features/session/api';
 import { ParticipantAvatar } from '../../../src/features/session/components/ParticipantAvatar';
 import { JoinCodeBadge } from '../../../src/features/session/components/JoinCodeBadge';
@@ -35,8 +36,66 @@ export default function SessionLobbyScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [optionName, setOptionName] = useState('');
   const [optionCuisine, setOptionCuisine] = useState('');
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
+
+  useEffect(() => {
+    if (!showAddModal) {
+      setRecommendations([]);
+      setRecsLoading(false);
+      return;
+    }
+
+    if (!sessionId) {
+      setRecommendations([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRecommendations = async () => {
+      setRecsLoading(true);
+      try {
+        const nextRecommendations = await getRecommendations(sessionId);
+        if (!cancelled) {
+          setRecommendations(nextRecommendations.slice(0, 5));
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setRecommendations([]);
+          Alert.alert('Error', err instanceof Error ? err.message : 'Could not load recommendations');
+        }
+      } finally {
+        if (!cancelled) {
+          setRecsLoading(false);
+        }
+      }
+    };
+
+    void loadRecommendations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, showAddModal]);
+
+  const addOptionToSession = async (input: AddOptionInput) => {
+    if (!sessionId || !participantId) return;
+    setAddLoading(true);
+    try {
+      await addOption(sessionId, input, participantId);
+      setOptionName('');
+      setOptionCuisine('');
+      setShowAddModal(false);
+      await refetchOptions();
+    } catch (err: unknown) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Could not add restaurant');
+    } finally {
+      setAddLoading(false);
+    }
+  };
 
   // Navigate when session status changes (picked up by polling in hook)
   const sessionStatus = session?.status;
@@ -48,19 +107,21 @@ export default function SessionLobbyScreen() {
   }
 
   const handleAddOption = async () => {
-    if (!optionName.trim() || !sessionId || !participantId) return;
-    setAddLoading(true);
-    try {
-      await addOption(sessionId, { name: optionName.trim(), cuisine: optionCuisine.trim() || undefined }, participantId);
-      setOptionName('');
-      setOptionCuisine('');
-      setShowAddModal(false);
-      await refetchOptions();
-    } catch (err: unknown) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not add restaurant');
-    } finally {
-      setAddLoading(false);
-    }
+    if (!optionName.trim()) return;
+    await addOptionToSession({
+      name: optionName.trim(),
+      cuisine: optionCuisine.trim() || undefined,
+    });
+  };
+
+  const handleAddRecommendation = async (recommendation: Recommendation) => {
+    await addOptionToSession({
+      name: recommendation.name,
+      cuisine: recommendation.cuisine,
+      priceLevel: recommendation.priceLevel,
+      distanceMiles: recommendation.distanceMiles,
+      imageUrl: recommendation.imageUrl,
+    });
   };
 
   const handleStartVoting = async () => {
@@ -174,6 +235,36 @@ export default function SessionLobbyScreen() {
         >
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Add Restaurant</Text>
+            {recsLoading ? (
+              <View style={styles.recommendationsLoadingRow}>
+                <ActivityIndicator size="small" color={THEME.colors.primary} />
+                <Text style={styles.recommendationsLoadingText}>Loading recommendations...</Text>
+              </View>
+            ) : recommendations.length > 0 ? (
+              <View style={styles.recommendationsSection}>
+                <Text style={styles.recommendationsTitle}>Recommended</Text>
+                <View style={styles.recommendationsList}>
+                  {recommendations.map((recommendation) => (
+                    <Pressable
+                      key={recommendation.id}
+                      style={[styles.recommendationItem, addLoading && styles.disabled]}
+                      disabled={addLoading}
+                      onPress={() => {
+                        void handleAddRecommendation(recommendation);
+                      }}
+                    >
+                      <View style={styles.recommendationTextWrap}>
+                        <Text style={styles.recommendationName}>{recommendation.name}</Text>
+                        {recommendation.cuisine ? (
+                          <Text style={styles.recommendationCuisine}>{recommendation.cuisine}</Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.recommendationAction}>Add</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             <TextInput
               placeholder="Restaurant name *"
               placeholderTextColor={THEME.colors.mutedForeground}
@@ -299,6 +390,57 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: THEME.colors.foreground,
+  },
+  recommendationsSection: {
+    gap: 8,
+  },
+  recommendationsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.colors.foreground,
+  },
+  recommendationsList: {
+    gap: 8,
+  },
+  recommendationItem: {
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    borderRadius: THEME.radius.input,
+    backgroundColor: THEME.colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  recommendationTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  recommendationName: {
+    color: THEME.colors.foreground,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  recommendationCuisine: {
+    color: THEME.colors.mutedForeground,
+    fontSize: 12,
+  },
+  recommendationAction: {
+    color: THEME.colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  recommendationsLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  recommendationsLoadingText: {
+    color: THEME.colors.mutedForeground,
+    fontSize: 13,
   },
   modalInput: {
     borderWidth: 1,
