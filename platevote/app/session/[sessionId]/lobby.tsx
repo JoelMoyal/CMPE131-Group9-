@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,7 +30,7 @@ export default function SessionLobbyScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const { participantId, isHost, setStatus } = useSessionStore();
 
-  const { session, participants, options, loading } = useSessionSubscription(sessionId ?? null);
+  const { session, participants, options, loading, refetchOptions } = useSessionSubscription(sessionId ?? null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [optionName, setOptionName] = useState('');
@@ -38,7 +38,7 @@ export default function SessionLobbyScreen() {
   const [addLoading, setAddLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
 
-  // Navigate when session status changes via realtime
+  // Navigate when session status changes (picked up by polling in hook)
   const sessionStatus = session?.status;
   if (sessionStatus === 'voting') {
     router.replace({ pathname: '/session/[sessionId]/vote', params: { sessionId } });
@@ -55,6 +55,7 @@ export default function SessionLobbyScreen() {
       setOptionName('');
       setOptionCuisine('');
       setShowAddModal(false);
+      await refetchOptions();
     } catch (err: unknown) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Could not add restaurant');
     } finally {

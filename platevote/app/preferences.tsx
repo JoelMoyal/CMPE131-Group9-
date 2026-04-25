@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   cuisineCard: {
     width: CARD_SIZE,
-    aspectRatio: 1,
+    aspectRatio: 1.4,
     borderRadius: THEME.radius.card,
     backgroundColor: '#fff',
     borderWidth: 2,
