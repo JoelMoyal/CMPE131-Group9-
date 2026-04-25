@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,7 +19,11 @@ import { supabase } from '../../../src/lib/supabase/client';
 
 import { addOption, type AddOptionInput } from '../../../src/features/options/api';
 import { OptionRow } from '../../../src/features/options/components/OptionRow';
-import { getRecommendations, type Recommendation } from '../../../src/features/recommendations/api';
+import {
+  getRecommendations,
+  type Recommendation,
+  type RecommendationFilters,
+} from '../../../src/features/recommendations/api';
 import { startVoting } from '../../../src/features/session/api';
 import { ParticipantAvatar } from '../../../src/features/session/components/ParticipantAvatar';
 import { JoinCodeBadge } from '../../../src/features/session/components/JoinCodeBadge';
@@ -38,8 +42,35 @@ export default function SessionLobbyScreen() {
   const [optionCuisine, setOptionCuisine] = useState('');
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
+  const [recommendationLocation, setRecommendationLocation] = useState('');
+  const [recommendationCuisine, setRecommendationCuisine] = useState('');
+  const [recommendationPriceLevel, setRecommendationPriceLevel] = useState<number | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
+
+  const loadRecommendations = useCallback(async () => {
+    if (!sessionId) {
+      setRecommendations([]);
+      return;
+    }
+
+    const filters: RecommendationFilters = {
+      location: recommendationLocation.trim() || undefined,
+      cuisine: recommendationCuisine.trim() || undefined,
+      priceLevel: recommendationPriceLevel ?? undefined,
+    };
+
+    setRecsLoading(true);
+    try {
+      const nextRecommendations = await getRecommendations(sessionId, filters);
+      setRecommendations(nextRecommendations.slice(0, 5));
+    } catch (err: unknown) {
+      setRecommendations([]);
+      Alert.alert('Error', err instanceof Error ? err.message : 'Could not load recommendations');
+    } finally {
+      setRecsLoading(false);
+    }
+  }, [recommendationCuisine, recommendationLocation, recommendationPriceLevel, sessionId]);
 
   useEffect(() => {
     if (!showAddModal) {
@@ -48,38 +79,8 @@ export default function SessionLobbyScreen() {
       return;
     }
 
-    if (!sessionId) {
-      setRecommendations([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadRecommendations = async () => {
-      setRecsLoading(true);
-      try {
-        const nextRecommendations = await getRecommendations(sessionId);
-        if (!cancelled) {
-          setRecommendations(nextRecommendations.slice(0, 5));
-        }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setRecommendations([]);
-          Alert.alert('Error', err instanceof Error ? err.message : 'Could not load recommendations');
-        }
-      } finally {
-        if (!cancelled) {
-          setRecsLoading(false);
-        }
-      }
-    };
-
     void loadRecommendations();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId, showAddModal]);
+  }, [loadRecommendations, showAddModal]);
 
   const addOptionToSession = async (input: AddOptionInput) => {
     if (!sessionId || !participantId) return;
@@ -235,6 +236,63 @@ export default function SessionLobbyScreen() {
         >
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Add Restaurant</Text>
+            <TextInput
+              placeholder="Location (city or neighborhood)"
+              placeholderTextColor={THEME.colors.mutedForeground}
+              style={styles.modalInput}
+              value={recommendationLocation}
+              onChangeText={setRecommendationLocation}
+              returnKeyType="next"
+            />
+            <TextInput
+              placeholder="Cuisine filter (e.g. Sushi)"
+              placeholderTextColor={THEME.colors.mutedForeground}
+              style={styles.modalInput}
+              value={recommendationCuisine}
+              onChangeText={setRecommendationCuisine}
+              returnKeyType="next"
+            />
+            <View style={styles.priceFilterRow}>
+              <Text style={styles.priceFilterLabel}>Price</Text>
+              <View style={styles.priceFilterChips}>
+                {[1, 2, 3, 4].map((price) => {
+                  const active = recommendationPriceLevel === price;
+                  return (
+                    <Pressable
+                      key={price}
+                      style={[styles.priceChip, active && styles.priceChipActive]}
+                      onPress={() => setRecommendationPriceLevel(active ? null : price)}
+                    >
+                      <Text style={[styles.priceChipText, active && styles.priceChipTextActive]}>
+                        {'$'.repeat(price)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+                <Pressable
+                  style={[styles.priceChip, recommendationPriceLevel == null && styles.priceChipActive]}
+                  onPress={() => setRecommendationPriceLevel(null)}
+                >
+                  <Text
+                    style={[
+                      styles.priceChipText,
+                      recommendationPriceLevel == null && styles.priceChipTextActive,
+                    ]}
+                  >
+                    Any
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+            <Pressable
+              style={[styles.refreshButton, recsLoading && styles.disabled]}
+              onPress={() => {
+                void loadRecommendations();
+              }}
+              disabled={recsLoading}
+            >
+              <Text style={styles.refreshButtonText}>Find Suggestions</Text>
+            </Pressable>
             {recsLoading ? (
               <View style={styles.recommendationsLoadingRow}>
                 <ActivityIndicator size="small" color={THEME.colors.primary} />
@@ -451,6 +509,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: THEME.colors.foreground,
     backgroundColor: THEME.colors.background,
+  },
+  priceFilterRow: {
+    gap: 8,
+  },
+  priceFilterLabel: {
+    fontSize: 13,
+    color: THEME.colors.mutedForeground,
+    fontWeight: '600',
+  },
+  priceFilterChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  priceChip: {
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#fff',
+  },
+  priceChipActive: {
+    backgroundColor: THEME.colors.primary,
+    borderColor: THEME.colors.primary,
+  },
+  priceChipText: {
+    color: THEME.colors.foreground,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  priceChipTextActive: {
+    color: '#fff',
+  },
+  refreshButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: THEME.colors.primary + '22',
+    borderColor: THEME.colors.primary + '50',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  refreshButtonText: {
+    color: THEME.colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
   },
   modalButtons: {
     flexDirection: 'row',
