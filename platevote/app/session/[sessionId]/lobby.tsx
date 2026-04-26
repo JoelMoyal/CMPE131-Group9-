@@ -49,7 +49,7 @@ export default function SessionLobbyScreen() {
   const [recommendationPriceLevel, setRecommendationPriceLevel] = useState<number | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
-  const [botSpawned, setBotSpawned] = useState(false);
+  const [botCount, setBotCount] = useState(0);
 
   const loadRecommendations = useCallback(async () => {
     if (!sessionId) {
@@ -208,12 +208,12 @@ export default function SessionLobbyScreen() {
           </Text>
         )}
 
-        {/* Demo bot button - adds a fake player for testing */}
-        {dynamicIsHost && !botSpawned && sessionId && (
+        {/* Demo bot button - adds fake players for testing */}
+        {dynamicIsHost && sessionId && (
           <Pressable
             style={styles.botButton}
             onPress={() => {
-              setBotSpawned(true);
+              setBotCount((c) => c + 1);
               void spawnDemoBot(sessionId);
             }}
           >
@@ -221,8 +221,8 @@ export default function SessionLobbyScreen() {
             <Text style={styles.botButtonText}>Add Demo Player</Text>
           </Pressable>
         )}
-        {botSpawned && (
-          <Text style={styles.botHint}>Bot joined! It will vote automatically when voting starts.</Text>
+        {botCount > 0 && (
+          <Text style={styles.botHint}>{botCount} bot{botCount > 1 ? 's' : ''} joined! They will vote automatically when voting starts.</Text>
         )}
 
         {/* Added Restaurants */}
