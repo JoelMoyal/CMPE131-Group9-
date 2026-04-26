@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../src/lib/supabase/client';
 
 import { addOption, type AddOptionInput } from '../../../src/features/options/api';
@@ -62,7 +63,15 @@ export default function SessionLobbyScreen() {
 
     setRecsLoading(true);
     try {
-      const nextRecommendations = await getRecommendations(sessionId, filters);
+      const allRecs = await getRecommendations(sessionId, filters);
+      // filter out restaurants already added to the session
+      const existingNames = new Set([
+        ...options.map((o) => o.name.toLowerCase()),
+        ...addedNames,
+      ]);
+      const nextRecommendations = allRecs.filter(
+        (r) => !existingNames.has(r.name.toLowerCase()),
+      );
       setRecommendations(nextRecommendations.slice(0, 5));
     } catch (err: unknown) {
       setRecommendations([]);
@@ -76,20 +85,23 @@ export default function SessionLobbyScreen() {
     if (!showAddModal) {
       setRecommendations([]);
       setRecsLoading(false);
+      setAddedNames(new Set());
       return;
     }
 
     void loadRecommendations();
   }, [loadRecommendations, showAddModal]);
 
-  const addOptionToSession = async (input: AddOptionInput) => {
+  const addOptionToSession = async (input: AddOptionInput, keepOpen = false) => {
     if (!sessionId || !participantId) return;
     setAddLoading(true);
     try {
       await addOption(sessionId, input, participantId);
       setOptionName('');
       setOptionCuisine('');
-      setShowAddModal(false);
+      if (!keepOpen) {
+        setShowAddModal(false);
+      }
       await refetchOptions();
     } catch (err: unknown) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Could not add restaurant');
@@ -115,14 +127,20 @@ export default function SessionLobbyScreen() {
     });
   };
 
+  // track names of restaurants already added so we don't show them again
+  const [addedNames, setAddedNames] = useState<Set<string>>(new Set());
+
   const handleAddRecommendation = async (recommendation: Recommendation) => {
+    // remove from list and remember the name
+    setRecommendations((prev) => prev.filter((r) => r.id !== recommendation.id));
+    setAddedNames((prev) => new Set(prev).add(recommendation.name.toLowerCase()));
     await addOptionToSession({
       name: recommendation.name,
       cuisine: recommendation.cuisine,
       priceLevel: recommendation.priceLevel,
       distanceMiles: recommendation.distanceMiles,
       imageUrl: recommendation.imageUrl,
-    });
+    }, true);
   };
 
   const handleStartVoting = async () => {
@@ -235,126 +253,144 @@ export default function SessionLobbyScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Add Restaurant</Text>
-            <TextInput
-              placeholder="Location (city or neighborhood)"
-              placeholderTextColor={THEME.colors.mutedForeground}
-              style={styles.modalInput}
-              value={recommendationLocation}
-              onChangeText={setRecommendationLocation}
-              returnKeyType="next"
-            />
-            <TextInput
-              placeholder="Cuisine filter (e.g. Sushi)"
-              placeholderTextColor={THEME.colors.mutedForeground}
-              style={styles.modalInput}
-              value={recommendationCuisine}
-              onChangeText={setRecommendationCuisine}
-              returnKeyType="next"
-            />
-            <View style={styles.priceFilterRow}>
-              <Text style={styles.priceFilterLabel}>Price</Text>
-              <View style={styles.priceFilterChips}>
-                {[1, 2, 3, 4].map((price) => {
-                  const active = recommendationPriceLevel === price;
-                  return (
-                    <Pressable
-                      key={price}
-                      style={[styles.priceChip, active && styles.priceChipActive]}
-                      onPress={() => setRecommendationPriceLevel(active ? null : price)}
-                    >
-                      <Text style={[styles.priceChipText, active && styles.priceChipTextActive]}>
-                        {'$'.repeat(price)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-                <Pressable
-                  style={[styles.priceChip, recommendationPriceLevel == null && styles.priceChipActive]}
-                  onPress={() => setRecommendationPriceLevel(null)}
-                >
-                  <Text
-                    style={[
-                      styles.priceChipText,
-                      recommendationPriceLevel == null && styles.priceChipTextActive,
-                    ]}
-                  >
-                    Any
-                  </Text>
-                </Pressable>
-              </View>
+            {/* Header with close button */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Restaurant</Text>
+              <Pressable onPress={() => setShowAddModal(false)} style={styles.modalClose}>
+                <Ionicons name="close" size={22} color={THEME.colors.mutedForeground} />
+              </Pressable>
             </View>
-            <Pressable
-              style={[styles.refreshButton, recsLoading && styles.disabled]}
-              onPress={() => {
-                void loadRecommendations();
-              }}
-              disabled={recsLoading}
-            >
-              <Text style={styles.refreshButtonText}>Find Suggestions</Text>
-            </Pressable>
-            {recsLoading ? (
-              <View style={styles.recommendationsLoadingRow}>
-                <ActivityIndicator size="small" color={THEME.colors.primary} />
-                <Text style={styles.recommendationsLoadingText}>Loading recommendations...</Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+              {/* Search section */}
+              <View style={styles.modalSection}>
+                <View style={styles.modalSectionHeader}>
+                  <Ionicons name="search" size={16} color={THEME.colors.primary} />
+                  <Text style={styles.modalSectionTitle}>Find Nearby</Text>
+                </View>
+                <View style={styles.searchRow}>
+                  <TextInput
+                    placeholder="Location"
+                    placeholderTextColor={THEME.colors.mutedForeground}
+                    style={[styles.modalInput, styles.searchInputHalf]}
+                    value={recommendationLocation}
+                    onChangeText={setRecommendationLocation}
+                    returnKeyType="next"
+                  />
+                  <TextInput
+                    placeholder="Cuisine"
+                    placeholderTextColor={THEME.colors.mutedForeground}
+                    style={[styles.modalInput, styles.searchInputHalf]}
+                    value={recommendationCuisine}
+                    onChangeText={setRecommendationCuisine}
+                    returnKeyType="next"
+                  />
+                </View>
+                <View style={styles.priceAndSearch}>
+                  <View style={styles.priceFilterChips}>
+                    {[1, 2, 3, 4].map((price) => {
+                      const active = recommendationPriceLevel === price;
+                      return (
+                        <Pressable
+                          key={price}
+                          style={[styles.priceChip, active && styles.priceChipActive]}
+                          onPress={() => setRecommendationPriceLevel(active ? null : price)}
+                        >
+                          <Text style={[styles.priceChipText, active && styles.priceChipTextActive]}>
+                            {'$'.repeat(price)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Pressable
+                    style={[styles.searchButton, recsLoading && styles.disabled]}
+                    onPress={() => { void loadRecommendations(); }}
+                    disabled={recsLoading}
+                  >
+                    <Ionicons name="search" size={16} color="#fff" />
+                    <Text style={styles.searchButtonText}>Search</Text>
+                  </Pressable>
+                </View>
               </View>
-            ) : recommendations.length > 0 ? (
-              <View style={styles.recommendationsSection}>
-                <Text style={styles.recommendationsTitle}>Recommended</Text>
-                <View style={styles.recommendationsList}>
+
+              {/* Recommendations */}
+              {recsLoading ? (
+                <View style={styles.recommendationsLoadingRow}>
+                  <ActivityIndicator size="small" color={THEME.colors.primary} />
+                  <Text style={styles.recommendationsLoadingText}>Searching restaurants...</Text>
+                </View>
+              ) : recommendations.length > 0 ? (
+                <View style={styles.recommendationsSection}>
                   {recommendations.map((recommendation) => (
                     <Pressable
                       key={recommendation.id}
                       style={[styles.recommendationItem, addLoading && styles.disabled]}
                       disabled={addLoading}
-                      onPress={() => {
-                        void handleAddRecommendation(recommendation);
-                      }}
+                      onPress={() => { void handleAddRecommendation(recommendation); }}
                     >
+                      <View style={styles.recThumb}>
+                        <Text style={styles.recThumbText}>{recommendation.name[0].toUpperCase()}</Text>
+                      </View>
                       <View style={styles.recommendationTextWrap}>
                         <Text style={styles.recommendationName}>{recommendation.name}</Text>
-                        {recommendation.cuisine ? (
-                          <Text style={styles.recommendationCuisine}>{recommendation.cuisine}</Text>
-                        ) : null}
+                        <Text style={styles.recommendationMeta}>
+                          {[
+                            recommendation.cuisine,
+                            recommendation.priceLevel ? '$'.repeat(recommendation.priceLevel) : null,
+                            recommendation.distanceMiles ? `${recommendation.distanceMiles} mi` : null,
+                          ].filter(Boolean).join('  ·  ') || 'Restaurant'}
+                        </Text>
                       </View>
-                      <Text style={styles.recommendationAction}>Add</Text>
+                      <View style={styles.addIconButton}>
+                        <Ionicons name="add" size={20} color={THEME.colors.primary} />
+                      </View>
                     </Pressable>
                   ))}
                 </View>
+              ) : null}
+
+              {/* Manual add divider */}
+              <View style={styles.modalDivider}>
+                <View style={styles.modalDividerLine} />
+                <Text style={styles.modalDividerText}>or add manually</Text>
+                <View style={styles.modalDividerLine} />
               </View>
-            ) : null}
-            <TextInput
-              placeholder="Restaurant name *"
-              placeholderTextColor={THEME.colors.mutedForeground}
-              style={styles.modalInput}
-              value={optionName}
-              onChangeText={setOptionName}
-              returnKeyType="next"
-            />
-            <TextInput
-              placeholder="Cuisine (optional)"
-              placeholderTextColor={THEME.colors.mutedForeground}
-              style={styles.modalInput}
-              value={optionCuisine}
-              onChangeText={setOptionCuisine}
-              returnKeyType="done"
-            />
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelButton} onPress={() => setShowAddModal(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.confirmButton, (!optionName.trim() || addLoading) && styles.disabled]}
-                disabled={!optionName.trim() || addLoading}
-                onPress={handleAddOption}
-              >
-                {addLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.confirmButtonText}>Add</Text>
-                )}
-              </Pressable>
-            </View>
+
+              {/* Manual add section */}
+              <View style={styles.modalSection}>
+                <TextInput
+                  placeholder="Restaurant name"
+                  placeholderTextColor={THEME.colors.mutedForeground}
+                  style={styles.modalInput}
+                  value={optionName}
+                  onChangeText={setOptionName}
+                  returnKeyType="next"
+                />
+                <TextInput
+                  placeholder="Cuisine (optional)"
+                  placeholderTextColor={THEME.colors.mutedForeground}
+                  style={styles.modalInput}
+                  value={optionCuisine}
+                  onChangeText={setOptionCuisine}
+                  returnKeyType="done"
+                />
+                <Pressable
+                  style={[styles.manualAddButton, (!optionName.trim() || addLoading) && styles.disabled]}
+                  disabled={!optionName.trim() || addLoading}
+                  onPress={handleAddOption}
+                >
+                  {addLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                      <Text style={styles.manualAddButtonText}>Add Restaurant</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -434,43 +470,134 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    gap: 14,
+    backgroundColor: THEME.colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.colors.border + '60',
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: THEME.colors.foreground,
+  },
+  modalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: THEME.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalScroll: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  modalSection: {
+    gap: 10,
+  },
+  modalSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  modalSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.colors.primary,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  searchInputHalf: {
+    flex: 1,
+  },
+  priceAndSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  priceFilterChips: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  priceChip: {
+    borderWidth: 1.5,
+    borderColor: THEME.colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: THEME.colors.background,
+  },
+  priceChipActive: {
+    backgroundColor: THEME.colors.primary,
+    borderColor: THEME.colors.primary,
+  },
+  priceChipText: {
+    color: THEME.colors.foreground,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  priceChipTextActive: {
+    color: '#fff',
+  },
+  searchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: THEME.colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
   },
   recommendationsSection: {
     gap: 8,
-  },
-  recommendationsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: THEME.colors.foreground,
-  },
-  recommendationsList: {
-    gap: 8,
+    marginTop: 14,
   },
   recommendationItem: {
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    borderRadius: THEME.radius.input,
-    backgroundColor: THEME.colors.card,
+    borderRadius: 14,
+    backgroundColor: THEME.colors.background,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 12,
+  },
+  recThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: THEME.colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recThumbText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.colors.primary,
   },
   recommendationTextWrap: {
     flex: 1,
@@ -479,105 +606,73 @@ const styles = StyleSheet.create({
   recommendationName: {
     color: THEME.colors.foreground,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 15,
   },
-  recommendationCuisine: {
+  recommendationMeta: {
     color: THEME.colors.mutedForeground,
     fontSize: 12,
   },
-  recommendationAction: {
-    color: THEME.colors.primary,
-    fontWeight: '700',
-    fontSize: 13,
+  addIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: THEME.colors.primary + '15',
+    borderWidth: 1.5,
+    borderColor: THEME.colors.primary + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recommendationsLoadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    paddingVertical: 4,
+    paddingVertical: 20,
   },
   recommendationsLoadingText: {
     color: THEME.colors.mutedForeground,
     fontSize: 13,
   },
+  modalDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 18,
+  },
+  modalDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: THEME.colors.border,
+  },
+  modalDividerText: {
+    fontSize: 13,
+    color: THEME.colors.mutedForeground,
+    fontWeight: '500',
+  },
   modalInput: {
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    borderRadius: THEME.radius.input,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 16,
     color: THEME.colors.foreground,
     backgroundColor: THEME.colors.background,
   },
-  priceFilterRow: {
-    gap: 8,
-  },
-  priceFilterLabel: {
-    fontSize: 13,
-    color: THEME.colors.mutedForeground,
-    fontWeight: '600',
-  },
-  priceFilterChips: {
+  manualAddButton: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-  },
-  priceChip: {
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#fff',
-  },
-  priceChipActive: {
+    borderRadius: 12,
     backgroundColor: THEME.colors.primary,
-    borderColor: THEME.colors.primary,
-  },
-  priceChipText: {
-    color: THEME.colors.foreground,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  priceChipTextActive: {
-    color: '#fff',
-  },
-  refreshButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: THEME.colors.primary + '22',
-    borderColor: THEME.colors.primary + '50',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  refreshButtonText: {
-    color: THEME.colors.primary,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
+    paddingVertical: 14,
     marginTop: 4,
-    paddingBottom: 8,
+    marginBottom: 16,
   },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: THEME.radius.input,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    alignItems: 'center',
+  manualAddButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
   },
-  cancelButtonText: { fontSize: 15, color: THEME.colors.foreground },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: THEME.radius.input,
-    backgroundColor: THEME.colors.primary,
-    alignItems: 'center',
-  },
-  confirmButtonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });
