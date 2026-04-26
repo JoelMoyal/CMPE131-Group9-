@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +13,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { createSession } from '../src/features/session/api';
@@ -29,6 +32,12 @@ export default function CreateSessionScreen() {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // fade in animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+  }, [fadeAnim]);
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -58,7 +67,7 @@ export default function CreateSessionScreen() {
       });
       useSessionStore.getState().setPreferences(selectedCuisines, selectedPrice);
       router.push({
-        pathname: '/preferences' as never,
+        pathname: '/session/[sessionId]/lobby' as never,
         params: { sessionId: session.id },
       });
     } catch (err: unknown) {
@@ -75,102 +84,127 @@ export default function CreateSessionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.heading}>Create Session</Text>
-
-          {/* Session Name */}
-          <Text style={styles.label}>Session Name</Text>
-          <TextInput
-            placeholder="Dinner with friends..."
-            placeholderTextColor={THEME.colors.mutedForeground}
-            style={styles.input}
-            value={sessionName}
-            onChangeText={setSessionName}
-            returnKeyType="done"
-          />
-
-          {/* Location */}
-          <Text style={styles.label}>Location</Text>
-          <Pressable style={styles.dropdown} onPress={() => setShowCityPicker((v) => !v)}>
-            <Text style={styles.dropdownIcon}>📍</Text>
-            <Text style={styles.dropdownText}>{selectedCity}</Text>
-            <Text style={styles.dropdownChevron}>▾</Text>
-          </Pressable>
-          {showCityPicker && (
-            <View style={styles.cityList}>
-              {CITIES.map((city) => (
-                <Pressable
-                  key={city}
-                  style={[styles.cityItem, city === selectedCity && styles.cityItemSelected]}
-                  onPress={() => {
-                    setSelectedCity(city);
-                    setShowCityPicker(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.cityItemText,
-                      city === selectedCity && styles.cityItemTextSelected,
-                    ]}
-                  >
-                    {city}
-                  </Text>
-                </Pressable>
-              ))}
+          <Animated.View style={{ opacity: fadeAnim, gap: 16 }}>
+            <View style={styles.headerRow}>
+              <Text style={styles.heading}>New Session</Text>
+              <Text style={styles.subheading}>Set up your group vote</Text>
             </View>
-          )}
 
-          {/* Cuisine filters */}
-          <Text style={styles.label}>Filters</Text>
-          <View style={styles.chipRow}>
-            {CUISINES.map((c) => {
-              const active = selectedCuisines.includes(c.id);
-              return (
-                <Pressable
-                  key={c.id}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => toggleCuisine(c.id)}
-                >
-                  <Text style={styles.chipEmoji}>{c.emoji}</Text>
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+            {/* Session Name Card */}
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Session Name</Text>
+              <TextInput
+                placeholder="Dinner with friends..."
+                placeholderTextColor={THEME.colors.mutedForeground}
+                style={styles.input}
+                value={sessionName}
+                onChangeText={setSessionName}
+                returnKeyType="done"
+              />
+            </View>
 
-          {/* Price filters */}
-          <View style={styles.chipRow}>
-            {PRICE_LEVELS.map((p) => {
-              const active = selectedPrice === p.value;
-              return (
-                <Pressable
-                  key={p.value}
-                  style={[styles.priceChip, active && styles.chipActive]}
-                  onPress={() => setSelectedPrice(active ? null : p.value)}
-                >
-                  <Text style={[styles.priceChipText, active && styles.chipTextActive]}>
-                    {p.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {/* Location Card */}
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Location</Text>
+              <Pressable style={styles.dropdown} onPress={() => setShowCityPicker((v) => !v)}>
+                <Ionicons name="location-sharp" size={18} color={THEME.colors.primary} />
+                <Text style={styles.dropdownText}>{selectedCity}</Text>
+                <Text style={styles.dropdownChevron}>{showCityPicker ? '▴' : '▾'}</Text>
+              </Pressable>
+              {showCityPicker && (
+                <View style={styles.cityList}>
+                  {CITIES.map((city) => (
+                    <Pressable
+                      key={city}
+                      style={[styles.cityItem, city === selectedCity && styles.cityItemSelected]}
+                      onPress={() => {
+                        setSelectedCity(city);
+                        setShowCityPicker(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.cityItemText,
+                          city === selectedCity && styles.cityItemTextSelected,
+                        ]}
+                      >
+                        {city === selectedCity ? `✓  ${city}` : `    ${city}`}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
 
-            {/* Distance */}
-            <Pressable style={[styles.priceChip, styles.chipActive]}>
-              <Text style={styles.chipTextActive}>5 miles</Text>
+            {/* Cuisine Card */}
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>What sounds good?</Text>
+              <View style={styles.chipRow}>
+                {CUISINES.map((c) => {
+                  const active = selectedCuisines.includes(c.id);
+                  return (
+                    <Pressable
+                      key={c.id}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => toggleCuisine(c.id)}
+                    >
+                      <MaterialCommunityIcons
+                        name={c.icon}
+                        size={18}
+                        color={active ? THEME.colors.primary : THEME.colors.mutedForeground}
+                      />
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Price & Distance Card */}
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Budget & Distance</Text>
+              <View style={styles.chipRow}>
+                {PRICE_LEVELS.map((p) => {
+                  const active = selectedPrice === p.value;
+                  return (
+                    <Pressable
+                      key={p.value}
+                      style={[styles.priceChip, active && styles.priceChipActive]}
+                      onPress={() => setSelectedPrice(active ? null : p.value)}
+                    >
+                      <Text style={[styles.priceChipText, active && styles.priceChipTextActive]}>
+                        {p.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+                <View style={styles.distanceChip}>
+                  <Ionicons name="navigate-outline" size={14} color={THEME.colors.secondary} />
+                  <Text style={styles.distanceText}>5 mi</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Create Button */}
+            <Pressable
+              style={[styles.createButton, loading && styles.disabled]}
+              disabled={loading}
+              onPress={handleNext}
+            >
+              <LinearGradient
+                colors={['#d4805a', THEME.colors.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.buttonGradient}
+              >
+                {loading ? (
+                  <ActivityIndicator color={THEME.colors.primaryForeground} />
+                ) : (
+                  <Text style={styles.createButtonText}>Create Session →</Text>
+                )}
+              </LinearGradient>
             </Pressable>
-          </View>
-
-          <Pressable
-            style={[styles.nextButton, loading && styles.disabled]}
-            disabled={loading}
-            onPress={handleNext}
-          >
-            {loading ? (
-              <ActivityIndicator color={THEME.colors.primaryForeground} />
-            ) : (
-              <Text style={styles.nextButtonText}>Next →</Text>
-            )}
-          </Pressable>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -180,27 +214,49 @@ export default function CreateSessionScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: THEME.colors.background },
   flex: { flex: 1 },
-  container: { padding: 24, gap: 12 },
+  container: { padding: 20, paddingBottom: 40 },
+  headerRow: {
+    gap: 4,
+    marginBottom: 4,
+  },
   heading: {
-    fontSize: 28,
+    fontSize: 32,
+    fontWeight: '900',
+    color: THEME.colors.foreground,
+    letterSpacing: -0.5,
+  },
+  subheading: {
+    fontSize: 15,
+    color: THEME.colors.mutedForeground,
+    fontWeight: '400',
+  },
+  card: {
+    backgroundColor: THEME.colors.card,
+    borderRadius: 16,
+    padding: 18,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: THEME.colors.border + '60',
+  },
+  cardLabel: {
+    fontSize: 14,
     fontWeight: '700',
     color: THEME.colors.foreground,
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: THEME.colors.foreground,
-    marginTop: 8,
+    letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    borderRadius: THEME.radius.input,
-    backgroundColor: '#fff',
+    borderRadius: 12,
+    backgroundColor: THEME.colors.background,
     color: THEME.colors.foreground,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 16,
   },
   dropdown: {
@@ -208,66 +264,93 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    borderRadius: THEME.radius.input,
-    backgroundColor: '#fff',
+    borderRadius: 12,
+    backgroundColor: THEME.colors.background,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     gap: 8,
   },
-  dropdownIcon: { fontSize: 16 },
-  dropdownText: { flex: 1, fontSize: 16, color: THEME.colors.foreground },
+  dropdownText: { flex: 1, fontSize: 16, color: THEME.colors.foreground, fontWeight: '500' },
   dropdownChevron: { fontSize: 14, color: THEME.colors.mutedForeground },
   cityList: {
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    borderRadius: THEME.radius.card,
-    backgroundColor: '#fff',
+    borderRadius: 12,
+    backgroundColor: THEME.colors.background,
     overflow: 'hidden',
-    marginTop: -4,
   },
   cityItem: { paddingVertical: 12, paddingHorizontal: 16 },
-  cityItemSelected: { backgroundColor: THEME.colors.primary + '18' },
+  cityItemSelected: { backgroundColor: THEME.colors.primary + '15' },
   cityItemText: { fontSize: 15, color: THEME.colors.foreground },
-  cityItemTextSelected: { color: THEME.colors.primary, fontWeight: '600' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cityItemTextSelected: { color: THEME.colors.primary, fontWeight: '700' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: THEME.colors.border,
-    backgroundColor: '#fff',
+    backgroundColor: THEME.colors.background,
   },
   chipActive: {
-    backgroundColor: THEME.colors.primary + '20',
+    backgroundColor: THEME.colors.primary + '18',
     borderColor: THEME.colors.primary,
   },
-  chipEmoji: { fontSize: 14 },
-  chipText: { fontSize: 14, color: THEME.colors.foreground },
-  chipTextActive: { color: THEME.colors.primary, fontWeight: '600' },
+  chipText: { fontSize: 14, color: THEME.colors.foreground, fontWeight: '500' },
+  chipTextActive: { color: THEME.colors.primary, fontWeight: '700' },
   priceChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: THEME.colors.border,
-    backgroundColor: '#fff',
+    backgroundColor: THEME.colors.background,
   },
-  priceChipText: { fontSize: 14, color: THEME.colors.foreground },
-  nextButton: {
-    marginTop: 16,
-    borderRadius: THEME.radius.input,
+  priceChipActive: {
     backgroundColor: THEME.colors.primary,
-    paddingVertical: 15,
+    borderColor: THEME.colors.primary,
+  },
+  priceChipText: { fontSize: 15, color: THEME.colors.foreground, fontWeight: '600' },
+  priceChipTextActive: { color: '#fff', fontWeight: '700' },
+  distanceChip: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: THEME.colors.secondary + '20',
+    borderWidth: 1.5,
+    borderColor: THEME.colors.secondary + '40',
   },
-  nextButtonText: {
+  distanceText: {
+    fontSize: 14,
+    color: THEME.colors.secondary,
+    fontWeight: '600',
+  },
+  createButton: {
+    marginTop: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: THEME.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  buttonGradient: {
+    paddingVertical: 17,
+    alignItems: 'center',
+    borderRadius: 14,
+  },
+  createButtonText: {
     color: THEME.colors.primaryForeground,
-    fontWeight: '700',
-    fontSize: 16,
+    fontWeight: '800',
+    fontSize: 17,
+    letterSpacing: 0.3,
   },
-  disabled: { opacity: 0.5 },
+  disabled: { opacity: 0.45 },
 });
