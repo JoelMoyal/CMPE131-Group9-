@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../src/lib/supabase/client';
 
 import { addOption, type AddOptionInput } from '../../../src/features/options/api';
+import { spawnDemoBot } from '../../../src/features/bot/demo-bot';
 import { OptionRow } from '../../../src/features/options/components/OptionRow';
 import {
   getRecommendations,
@@ -48,6 +49,7 @@ export default function SessionLobbyScreen() {
   const [recommendationPriceLevel, setRecommendationPriceLevel] = useState<number | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
+  const [botSpawned, setBotSpawned] = useState(false);
 
   const loadRecommendations = useCallback(async () => {
     if (!sessionId) {
@@ -204,6 +206,23 @@ export default function SessionLobbyScreen() {
           <Text style={styles.waitingText}>
             {participants.length === 1 ? 'Waiting for more players...' : `${participants.length} players joined`}
           </Text>
+        )}
+
+        {/* Demo bot button - adds a fake player for testing */}
+        {dynamicIsHost && !botSpawned && sessionId && (
+          <Pressable
+            style={styles.botButton}
+            onPress={() => {
+              setBotSpawned(true);
+              void spawnDemoBot(sessionId);
+            }}
+          >
+            <Ionicons name="person-add-outline" size={16} color={THEME.colors.secondary} />
+            <Text style={styles.botButtonText}>Add Demo Player</Text>
+          </Pressable>
+        )}
+        {botSpawned && (
+          <Text style={styles.botHint}>Bot joined! It will vote automatically when voting starts.</Text>
         )}
 
         {/* Added Restaurants */}
@@ -467,6 +486,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   disabled: { opacity: 0.45 },
+  botButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: THEME.colors.secondary + '40',
+    backgroundColor: THEME.colors.secondary + '12',
+    marginBottom: 4,
+  },
+  botButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.colors.secondary,
+  },
+  botHint: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: THEME.colors.mutedForeground,
+    paddingHorizontal: 20,
+    marginBottom: 4,
+  },
   // Modal
   modalOverlay: {
     flex: 1,
