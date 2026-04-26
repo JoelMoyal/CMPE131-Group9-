@@ -3,6 +3,8 @@ import { compareRankedOptions } from '../../utils/tie-break';
 export type OptionForResult = {
   id: string;
   name: string;
+  cuisine?: string | null;
+  imageUrl?: string | null;
   createdAt: string;
   distanceMiles?: number | null;
 };
@@ -15,6 +17,8 @@ export type VoteForResult = {
 export type WinnerResult = {
   id: string;
   name: string;
+  cuisine?: string | null;
+  imageUrl?: string | null;
   avgScore: number;
   voteCount: number;
   distanceMiles?: number | null;
@@ -36,6 +40,8 @@ export function computeWinner(
     return {
       id: option.id,
       name: option.name,
+      cuisine: option.cuisine ?? null,
+      imageUrl: option.imageUrl ?? null,
       avgScore: optionVotes.length ? totalScore / optionVotes.length : 0,
       voteCount: optionVotes.length,
       distanceMiles: option.distanceMiles ?? null,
