@@ -7,7 +7,7 @@ const PARTICLE_COUNT = 28;
 const COLORS = ['#c96e4b', '#6e7c63', '#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9c74f', '#90be6d'];
 
 type Particle = {
-  x: Animated.Value;
+  x: number;
   y: Animated.Value;
   rotation: Animated.Value;
   color: string;
@@ -17,7 +17,7 @@ type Particle = {
 
 function makeParticles(): Particle[] {
   return Array.from({ length: PARTICLE_COUNT }, () => ({
-    x: new Animated.Value(Math.random() * SCREEN_WIDTH),
+    x: Math.random() * SCREEN_WIDTH,
     y: new Animated.Value(-20 - Math.random() * 60),
     rotation: new Animated.Value(0),
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
@@ -61,7 +61,7 @@ export function ConfettiOverlay({ active }: { active: boolean }) {
           key={i}
           style={{
             position: 'absolute',
-            left: p.x,
+            left: p.x as number,
             width: p.size,
             height: p.size,
             backgroundColor: p.color,
