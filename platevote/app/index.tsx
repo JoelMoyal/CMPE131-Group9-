@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +21,19 @@ import { THEME } from '../src/lib/constants/theme';
 import { useSessionStore } from '../src/state/session-store';
 
 export default function WelcomeScreen() {
+  // pulse animation on the logo
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
   const [displayName, setDisplayName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,11 +77,13 @@ export default function WelcomeScreen() {
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           {/* Logo + tagline */}
           <View style={styles.hero}>
-            <Image
-              source={require('../assets/Logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <Image
+                source={require('../assets/Logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </Animated.View>
             <Text style={styles.appName}>PlateVote</Text>
             <Text style={styles.tagline}>Pick where to eat together!</Text>
           </View>
@@ -122,10 +138,6 @@ export default function WelcomeScreen() {
             </Pressable>
           </View>
 
-          {/* Log In link */}
-          <Pressable style={styles.loginLink} onPress={() => {}}>
-            <Text style={styles.loginLinkText}>Log In</Text>
-          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -147,8 +159,8 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 160,
+    height: 160,
     marginBottom: 12,
   },
   appName: {
@@ -202,18 +214,4 @@ const styles = StyleSheet.create({
     color: THEME.colors.mutedForeground,
   },
   disabled: { opacity: 0.45 },
-  loginLink: {
-    alignSelf: 'center',
-    marginTop: 24,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    borderRadius: THEME.radius.input,
-  },
-  loginLinkText: {
-    fontSize: 15,
-    color: THEME.colors.foreground,
-    fontWeight: '500',
-  },
 });
