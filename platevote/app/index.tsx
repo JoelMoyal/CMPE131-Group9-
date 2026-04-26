@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
 import { joinSession } from '../src/features/session/api';
@@ -23,16 +24,27 @@ import { useSessionStore } from '../src/state/session-store';
 export default function WelcomeScreen() {
   // pulse animation on the logo
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  // fade in the form
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1200, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
       ]),
     );
     pulse.start();
+
+    // fade in the form on mount
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, delay: 300, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, delay: 300, useNativeDriver: true }),
+    ]).start();
+
     return () => pulse.stop();
-  }, [pulseAnim]);
+  }, [pulseAnim, fadeAnim, slideAnim]);
 
   const [displayName, setDisplayName] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -75,21 +87,23 @@ export default function WelcomeScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          {/* Logo + tagline */}
+          {/* Hero section */}
           <View style={styles.hero}>
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <Image
-                source={require('../assets/Logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
+              <View style={styles.logoGlow}>
+                <Image
+                  source={require('../assets/Logo.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
             </Animated.View>
             <Text style={styles.appName}>PlateVote</Text>
             <Text style={styles.tagline}>Pick where to eat together!</Text>
           </View>
 
-          {/* Form */}
-          <View style={styles.form}>
+          {/* Form card */}
+          <Animated.View style={[styles.formCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <TextInput
               placeholder="Your name..."
               placeholderTextColor={THEME.colors.mutedForeground}
@@ -105,7 +119,14 @@ export default function WelcomeScreen() {
               disabled={!canCreate}
               onPress={handleCreate}
             >
-              <Text style={styles.primaryButtonText}>Create Session</Text>
+              <LinearGradient
+                colors={['#d4805a', THEME.colors.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.primaryButtonText}>Create Session</Text>
+              </LinearGradient>
             </Pressable>
 
             <View style={styles.dividerRow}>
@@ -117,7 +138,7 @@ export default function WelcomeScreen() {
             <TextInput
               placeholder="Enter code (ABC123)"
               placeholderTextColor={THEME.colors.mutedForeground}
-              style={styles.input}
+              style={[styles.input, styles.codeInput]}
               value={joinCode}
               onChangeText={setJoinCode}
               autoCapitalize="characters"
@@ -126,18 +147,19 @@ export default function WelcomeScreen() {
             />
 
             <Pressable
-              style={[styles.primaryButton, !canJoin && styles.disabled]}
+              style={[styles.secondaryButton, !canJoin && styles.disabled]}
               disabled={!canJoin || loading}
               onPress={handleJoin}
             >
               {loading ? (
-                <ActivityIndicator color={THEME.colors.primaryForeground} />
+                <ActivityIndicator color={THEME.colors.primary} />
               ) : (
-                <Text style={styles.primaryButtonText}>Join Session</Text>
+                <Text style={styles.secondaryButtonText}>Join Session</Text>
               )}
             </Pressable>
-          </View>
+          </Animated.View>
 
+          <Text style={styles.footerText}>Swipe. Vote. Eat.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -149,60 +171,99 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flexGrow: 1,
-    paddingHorizontal: 32,
-    paddingBottom: 40,
+    paddingHorizontal: 28,
+    paddingBottom: 32,
     justifyContent: 'space-between',
   },
   hero: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 32,
+    paddingTop: 50,
+    paddingBottom: 24,
+  },
+  logoGlow: {
+    padding: 12,
+    borderRadius: 100,
+    backgroundColor: THEME.colors.primary + '12',
   },
   logo: {
-    width: 160,
-    height: 160,
-    marginBottom: 12,
+    width: 120,
+    height: 120,
   },
   appName: {
-    fontSize: 36,
-    fontWeight: '800',
+    fontSize: 38,
+    fontWeight: '900',
     color: THEME.colors.foreground,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    marginTop: 12,
   },
   tagline: {
     marginTop: 6,
     fontSize: 16,
     color: THEME.colors.mutedForeground,
+    fontWeight: '400',
   },
-  form: {
+  formCard: {
+    backgroundColor: THEME.colors.card,
+    borderRadius: 20,
+    padding: 24,
     gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: THEME.colors.border + '80',
   },
   input: {
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    borderRadius: THEME.radius.input,
-    backgroundColor: '#fff',
+    borderRadius: 12,
+    backgroundColor: THEME.colors.background,
     color: THEME.colors.foreground,
     paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingVertical: 14,
     fontSize: 16,
   },
+  codeInput: {
+    textAlign: 'center',
+    letterSpacing: 4,
+    fontSize: 18,
+    fontWeight: '600',
+  },
   primaryButton: {
-    borderRadius: THEME.radius.input,
-    backgroundColor: THEME.colors.primary,
-    paddingVertical: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  buttonGradient: {
+    paddingVertical: 16,
     alignItems: 'center',
+    borderRadius: 12,
   },
   primaryButtonText: {
     color: THEME.colors.primaryForeground,
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.3,
+  },
+  secondaryButton: {
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: THEME.colors.primary,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  secondaryButtonText: {
+    color: THEME.colors.primary,
     fontWeight: '700',
     fontSize: 16,
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginVertical: 2,
+    gap: 12,
+    marginVertical: 4,
   },
   dividerLine: {
     flex: 1,
@@ -212,6 +273,15 @@ const styles = StyleSheet.create({
   dividerText: {
     fontSize: 13,
     color: THEME.colors.mutedForeground,
+    fontWeight: '500',
   },
-  disabled: { opacity: 0.45 },
+  disabled: { opacity: 0.4 },
+  footerText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: THEME.colors.mutedForeground + '90',
+    fontWeight: '500',
+    letterSpacing: 1,
+    marginTop: 16,
+  },
 });
