@@ -6,6 +6,7 @@ export type SessionSummary = {
   title: string | null;
   status: SessionStatus;
   hostUserId: string;
+  enableTimeSelection: boolean;
 };
 
 export type Participant = {
@@ -39,4 +40,20 @@ export type Vote = {
   optionId: string;
   participantId: string;
   score: 1 | 2 | 3 | 4 | 5;
+};
+
+export type TimeSlot = {
+  id: string;
+  sessionId: string;
+  startTime: string; // ISO datetime
+  endTime: string; // ISO datetime
+  createdAt: string;
+};
+
+export type TimeAvailability = {
+  id: string;
+  participantId: string;
+  timeSlotId: string;
+  available: boolean;
+  createdAt: string;
 };

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Image,
   Pressable,
   SafeAreaView,
@@ -15,16 +16,18 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { listOptions } from '../../../src/features/options/api';
 import { listVotes } from '../../../src/features/voting/api';
+import { getTimeSlots, getTimeAvailability } from '../../../src/features/session/api';
 import { computeWinner } from '../../../src/features/results/selectors';
 import { ConfettiOverlay } from '../../../src/features/results/components/ConfettiOverlay';
 import { THEME } from '../../../src/lib/constants/theme';
 import { useSessionStore } from '../../../src/state/session-store';
 import { supabase } from '../../../src/lib/supabase/client';
 import type { WinnerResult } from '../../../src/features/results/selectors';
-import type { RestaurantOption, Vote, Participant } from '../../../src/features/session/types';
+import type { RestaurantOption, Vote, Participant, TimeSlot, TimeAvailability } from '../../../src/features/session/types';
 
 export default function ResultScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
+  const { enableTimeSelection } = useSessionStore();
   const clearSession = useSessionStore((s) => s.clearSession);
 
   const [winner, setWinner] = useState<WinnerResult | null>(null);
@@ -32,6 +35,8 @@ export default function ResultScreen() {
   const [allVotes, setAllVotes] = useState<Vote[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [timeAvailability, setTimeAvailability] = useState<Record<string, TimeAvailability[]>>({});
 
   // which breakdown row is expanded to show voters
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
@@ -98,6 +103,16 @@ export default function ResultScreen() {
         setParticipants(pList);
         const result = computeWinner(options, votes);
         setWinner(result);
+        
+        if (enableTimeSelection) {
+          const [slots, avail] = await Promise.all([
+            getTimeSlots(sessionId),
+            getTimeAvailability(sessionId),
+          ]);
+          setTimeSlots(slots);
+          setTimeAvailability(avail);
+        }
+        
         if (result) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
@@ -259,6 +274,35 @@ export default function ResultScreen() {
                 </Pressable>
               );
             })}
+          </View>
+        )}
+
+        {enableTimeSelection && timeSlots.length > 0 && (
+          <View style={styles.availabilityCard}>
+            <Text style={styles.availabilityTitle}>Best times for your group</Text>
+            <View style={styles.availabilityGrid}>
+              {timeSlots
+                .map((slot) => ({
+                  slot,
+                  count: timeAvailability[slot.id]?.filter((a) => a.available).length ?? 0,
+                }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 3)
+                .map(({ slot, count }) => {
+                  const date = new Date(slot.startTime);
+                  const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+                  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                  return (
+                    <View key={slot.id} style={styles.availabilityItem}>
+                      <Text style={styles.availabilityTime}>{time}</Text>
+                      <Text style={styles.availabilityDay}>{day}</Text>
+                      <View style={styles.availabilityBadge}>
+                        <Text style={styles.availabilityCount}>{count}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+            </View>
           </View>
         )}
 
@@ -504,5 +548,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: THEME.colors.mutedForeground,
     fontStyle: 'italic',
+  },
+  availabilityCard: {
+    marginVertical: 16,
+    paddingHorizontal: 28,
+    gap: 12,
+  },
+  availabilityTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.colors.foreground,
+  },
+  availabilityGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  availabilityItem: {
+    flex: 1,
+    backgroundColor: THEME.colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 6,
+  },
+  availabilityTime: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.colors.foreground,
+  },
+  availabilityDay: {
+    fontSize: 12,
+    color: THEME.colors.mutedForeground,
+  },
+  availabilityBadge: {
+    backgroundColor: THEME.colors.primary + '20',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  availabilityCount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.colors.primary,
   },
 });

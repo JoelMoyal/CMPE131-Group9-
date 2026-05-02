@@ -30,7 +30,7 @@ export function useSessionSubscription(sessionId: string | null): SubscriptionDa
       await Promise.all([
         client
           .from('sessions')
-          .select('id, join_code, title, status, host_user_id')
+          .select('id, join_code, title, status, host_user_id, enable_time_selection')
           .eq('id', sessionId)
           .single(),
         client
@@ -48,6 +48,7 @@ export function useSessionSubscription(sessionId: string | null): SubscriptionDa
         title: sessionData.title,
         status: sessionData.status as SessionStatus,
         hostUserId: sessionData.host_user_id,
+        enableTimeSelection: sessionData.enable_time_selection,
       });
     }
 

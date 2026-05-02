@@ -71,6 +71,7 @@ export default function WelcomeScreen() {
         status: session.status,
         joinCode: session.joinCode,
         isHost: false,
+        enableTimeSelection: session.enableTimeSelection,
       });
       router.push({ pathname: '/session/[sessionId]/lobby', params: { sessionId: session.id } });
     } catch (err: unknown) {

@@ -9,6 +9,7 @@ type SessionStore = {
   status: SessionStatus | null;
   joinCode: string | null;
   isHost: boolean;
+  enableTimeSelection: boolean;
   selectedCuisines: string[];
   selectedPriceLevel: number | null;
 
@@ -19,6 +20,7 @@ type SessionStore = {
     status: SessionStatus;
     joinCode?: string | null;
     isHost?: boolean;
+    enableTimeSelection?: boolean;
   }) => void;
   setParticipantName: (name: string) => void;
   setPreferences: (cuisines: string[], priceLevel: number | null) => void;
@@ -33,11 +35,12 @@ export const useSessionStore = create<SessionStore>((set) => ({
   status: null,
   joinCode: null,
   isHost: false,
+  enableTimeSelection: false,
   selectedCuisines: [],
   selectedPriceLevel: null,
 
-  setSession: ({ sessionId, participantId = null, participantName = null, status, joinCode = null, isHost = false }) =>
-    set({ sessionId, participantId, participantName, status, joinCode, isHost }),
+  setSession: ({ sessionId, participantId = null, participantName = null, status, joinCode = null, isHost = false, enableTimeSelection = false }) =>
+    set({ sessionId, participantId, participantName, status, joinCode, isHost, enableTimeSelection }),
 
   setParticipantName: (name) => set({ participantName: name }),
 
@@ -54,6 +57,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       status: null,
       joinCode: null,
       isHost: false,
+      enableTimeSelection: false,
       selectedCuisines: [],
       selectedPriceLevel: null,
     }),
