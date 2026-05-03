@@ -33,6 +33,7 @@ PlateVote is a mobile application to solve the "where to eat" dilemma. Users cre
 - Live voting
 - Smart results with tie-break
 - Google Places restaurant suggestions
+- Find a time that works for everyone
 
 ## Tech Stack
 
