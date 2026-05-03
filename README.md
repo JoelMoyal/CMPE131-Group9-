@@ -1,48 +1,75 @@
-PlateVote
-Project Overview:
+<div align="center">
+
+<img src="platevote/assets/Logo.png" alt="PlateVote Logo" width="120" />
+
+# PlateVote
+
+**Pick where to eat together!**
+
+*Swipe. Vote. Eat.*
+
+CMPE 131 — Group 9
+
+</div>
+
+---
+
+## Demo
+
+<video src="platevote/assets/PlateVote%20Demo%201.mp4" controls width="300"></video>
+
+> If the video doesn't play above, download it directly: [`PlateVote Demo 1.mp4`](platevote/assets/PlateVote%20Demo%201.mp4)
+
+<div align="center">
+<img src="platevote/assets/image.png" alt="PlateVote Home Screen" width="280" />
+</div>
+
+## About
+
 PlateVote is a mobile application to solve the "where to eat" dilemma. Users create a session, invite friends via a code, and everyone swipes on restaurant options. The app tallies the votes and picks the winner.
-Core features include: 
-- Real time lobby
-- Live vote
-- Smart results with tie break
+
+**Core features:**
+- Real-time lobby
+- Live voting
+- Smart results with tie-break
 - Google Places restaurant suggestions
 
-Tech Stack: 
-Frontend - React Native Expo with Typescript
-Backend - Supabase (postgreSQL + Realtime)
-Navigation - Expo router
-API - Google Places (for restaurant recommendations)
+## Tech Stack
 
-What to Do to Run: 
-- Install Node.js
-- Install Expo Go app on your IOS or Android device for testing on hardware
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React Native (Expo) + TypeScript |
+| Backend | Supabase (PostgreSQL + Realtime) |
+| Navigation | Expo Router |
+| API | Google Places |
 
-1) Installation
-First, if you haven't, clone repo and install dependencies through following commands:
+## Getting Started
 
-git clone https://github.com/JoelMoyal/CMPE131-Group9-.git
-cd platevote
-npm install
+**Prerequisites:** Node.js, Expo Go app on your device
 
-2) Environment Setup
-Copy the example env file and fill in your keys:
+1. **Clone & install**
+   ```bash
+   git clone https://github.com/JoelMoyal/CMPE131-Group9-.git
+   cd platevote
+   npm install
+   ```
 
-cp .env.example .env
+2. **Environment setup**
+   ```bash
+   cp .env.example .env
+   ```
+   Then add your keys to `.env`:
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY` *(optional — without it the app uses sample data)*
 
-Then add your Supabase and Google Places API keys to the .env file:
-- EXPO_PUBLIC_SUPABASE_URL (from your Supabase project settings)
-- EXPO_PUBLIC_SUPABASE_ANON_KEY (from your Supabase project settings)
-- EXPO_PUBLIC_GOOGLE_PLACES_API_KEY (optional - without it the app uses sample restaurant data)
+3. **Run**
+   ```bash
+   npx expo start
+   ```
+   Scan the QR code with Expo Go (Android) or Camera (iOS), or press `a`/`i` for emulators.
 
-3) Run Expo dev server using following command:
+## Docs
 
-npx expo start
-
-Expo handles all the compiling automatically so no extra build step is needed.
-
-4) View app:
-- Scan the QR code displayed on the terminal using the Expo Go App (Android) or Camera (iOS)
-- Emulator (press a for android or i for iOS)
-
-Demo Video:
-https://drive.google.com/file/d/10q-bHxj3UJJpxz8QvWm-cwJXsx2lMK4r/view
+- [Architecture](docs/architecture.md)
+- [Foundation Guide](group-project-foundation-guide-updated.md)

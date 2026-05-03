@@ -1,4 +1,4 @@
-import { requireSupabase, supabase } from '../../lib/supabase/client';
+import { isSupabaseEnabled, requireSupabase } from '../../lib/supabase/client';
 import type { SessionSummary } from './types';
 
 function makeLocalSession(): SessionSummary {
@@ -15,7 +15,7 @@ export async function createSession(
   displayName: string,
   title?: string,
 ): Promise<{ session: SessionSummary; participantId: string }> {
-  if (!supabase) {
+  if (!isSupabaseEnabled()) {
     return { session: makeLocalSession(), participantId: 'local-participant' };
   }
 
@@ -57,7 +57,7 @@ export async function joinSession(
   joinCode: string,
   displayName: string,
 ): Promise<{ session: SessionSummary; participantId: string }> {
-  if (!supabase) {
+  if (!isSupabaseEnabled()) {
     return { session: makeLocalSession(), participantId: 'local-participant' };
   }
 
@@ -96,7 +96,7 @@ export async function joinSession(
 }
 
 export async function startVoting(sessionId: string): Promise<void> {
-  if (!supabase) return;
+  if (!isSupabaseEnabled()) return;
 
   const client = requireSupabase();
   const { error } = await client
@@ -108,7 +108,7 @@ export async function startVoting(sessionId: string): Promise<void> {
 }
 
 export async function completeSession(sessionId: string): Promise<void> {
-  if (!supabase) return;
+  if (!isSupabaseEnabled()) return;
 
   const client = requireSupabase();
 

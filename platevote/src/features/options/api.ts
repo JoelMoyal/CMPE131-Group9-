@@ -1,4 +1,4 @@
-import { requireSupabase, supabase } from '../../lib/supabase/client';
+import { isSupabaseEnabled, requireSupabase } from '../../lib/supabase/client';
 import type { RestaurantOption } from '../session/types';
 
 export type AddOptionInput = {
@@ -23,7 +23,7 @@ function rowToOption(row: Record<string, unknown>): RestaurantOption {
 }
 
 export async function listOptions(sessionId: string): Promise<RestaurantOption[]> {
-  if (!supabase) return [];
+  if (!isSupabaseEnabled()) return [];
 
   const client = requireSupabase();
   const { data, error } = await client
@@ -41,7 +41,7 @@ export async function addOption(
   input: AddOptionInput,
   participantId: string,
 ): Promise<RestaurantOption> {
-  if (!supabase) {
+  if (!isSupabaseEnabled()) {
     return {
       id: `local-option-${Date.now()}`,
       sessionId,

@@ -1,15 +1,45 @@
 import { useEffect } from 'react';
-import { supabase } from '../supabase/client';
+import {
+  disableSupabaseForRuntime,
+  isNetworkRequestFailure,
+  isSupabaseEnabled,
+  requireSupabase,
+} from '../supabase/client';
 
 export function useAnonymousAuth() {
   useEffect(() => {
-    if (!supabase) return;
+    if (!isSupabaseEnabled()) return;
+
+    let cancelled = false;
+
     const init = async () => {
-      const { data: { session } } = await supabase!.auth.getSession();
-      if (!session) {
-        await supabase!.auth.signInAnonymously();
+      try {
+        const client = requireSupabase();
+        const {
+          data: { session },
+        } = await client.auth.getSession();
+
+        if (!session && !cancelled) {
+          await client.auth.signInAnonymously();
+        }
+      } catch (error: unknown) {
+        if (isNetworkRequestFailure(error)) {
+          disableSupabaseForRuntime(error);
+          return;
+        }
+
+        console.warn(
+          `Anonymous auth initialization failed: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
+        );
       }
     };
+
     init();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 }

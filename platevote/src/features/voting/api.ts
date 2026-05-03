@@ -1,4 +1,4 @@
-import { requireSupabase, supabase } from '../../lib/supabase/client';
+import { isSupabaseEnabled, requireSupabase } from '../../lib/supabase/client';
 import type { Vote } from '../session/types';
 
 export async function upsertVote(
@@ -7,7 +7,7 @@ export async function upsertVote(
   participantId: string,
   score: 1 | 2 | 3 | 4 | 5,
 ): Promise<Vote> {
-  if (!supabase) {
+  if (!isSupabaseEnabled()) {
     return {
       id: `local-vote-${Date.now()}`,
       sessionId,
@@ -39,7 +39,7 @@ export async function upsertVote(
 }
 
 export async function listVotes(sessionId: string): Promise<Vote[]> {
-  if (!supabase) return [];
+  if (!isSupabaseEnabled()) return [];
 
   const client = requireSupabase();
   const { data, error } = await client
