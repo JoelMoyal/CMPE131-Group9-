@@ -43,3 +43,6 @@ Expo handles all the compiling automatically so no extra build step is needed.
 4) View app:
 - Scan the QR code displayed on the terminal using the Expo Go App (Android) or Camera (iOS)
 - Emulator (press a for android or i for iOS)
+
+Demo Video:
+https://drive.google.com/file/d/10q-bHxj3UJJpxz8QvWm-cwJXsx2lMK4r/view
