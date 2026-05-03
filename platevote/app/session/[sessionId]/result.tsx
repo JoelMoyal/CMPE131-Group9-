@@ -42,23 +42,23 @@ export default function ResultScreen() {
 
   const handleFlip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Animated.spring(flipAnim, {
+    Animated.timing(flipAnim, {
       toValue: isFlipped ? 0 : 1,
+      duration: 400,
       useNativeDriver: true,
-      friction: 8,
-      tension: 60,
     }).start();
     setIsFlipped(!isFlipped);
   };
 
-  // front rotates 0 -> 90 deg then hides, back rotates -90 -> 0
-  const frontRotate = flipAnim.interpolate({
+  // use scale + opacity for a smooth flip effect that works on all platforms
+  // front shrinks to 0 width then hides, back grows from 0
+  const frontScale = flipAnim.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: ['0deg', '90deg', '90deg'],
+    outputRange: [1, 0, 0],
   });
-  const backRotate = flipAnim.interpolate({
+  const backScale = flipAnim.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: ['-90deg', '-90deg', '0deg'],
+    outputRange: [0, 0, 1],
   });
   const frontOpacity = flipAnim.interpolate({
     inputRange: [0, 0.49, 0.5],
@@ -134,7 +134,7 @@ export default function ResultScreen() {
         {/* Flippable winner card - tap to see venue details */}
         <Pressable onPress={handleFlip} style={styles.flipContainer}>
           {/* Front side - photo or initial */}
-          <Animated.View style={[styles.cardSide, { transform: [{ rotateY: frontRotate }], opacity: frontOpacity }]}>
+          <Animated.View style={[styles.cardSide, { transform: [{ scaleX: frontScale }], opacity: frontOpacity }]}>
             {winner?.imageUrl ? (
               <Image
                 source={{ uri: winner.imageUrl }}
@@ -151,7 +151,7 @@ export default function ResultScreen() {
           </Animated.View>
 
           {/* Back side - venue info */}
-          <Animated.View style={[styles.cardSide, styles.cardBack, { transform: [{ rotateY: backRotate }], opacity: backOpacity }]}>
+          <Animated.View style={[styles.cardSide, styles.cardBack, { transform: [{ scaleX: backScale }], opacity: backOpacity }]}>
             <Text style={styles.backTitle}>{winner?.name ?? 'Unknown'}</Text>
             <View style={styles.backDetails}>
               {winner?.cuisine ? (
@@ -304,7 +304,6 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 20,
     overflow: 'hidden',
-    backfaceVisibility: 'hidden',
   },
   cardBack: {
     position: 'absolute',
